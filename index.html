@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Space Invaders - Mission Complete</title>
+    <title>Space Invaders - Final Form</title>
     <style>
         body {
             background-color: #010103; color: #fff;
@@ -18,20 +18,14 @@
         #lives-display { font-size: 24px; color: #FF0055; text-shadow: 0 0 10px #FF0055; align-self: flex-start; }
         canvas { border: 4px solid #1a1a2e; background-color: #000; box-shadow: 0 0 60px rgba(0, 243, 255, 0.2); }
         
-        /* オーバーレイ画面共通 */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.92); display: none;
             flex-direction: column; align-items: center; justify-content: center; z-index: 100;
         }
-        
-        /* COMPLETE画面用スタイル */
         .complete-text { color: #00FF66; font-size: 120px; text-shadow: 0 0 50px #00FF66; font-weight: bold; }
         .keyword-text { color: #fff; font-size: 50px; margin: 30px 0 60px; text-shadow: 0 0 20px #fff; letter-spacing: 5px; }
-        
-        /* GAMEOVER画面用スタイル */
         .gameover-text { color: #FF0055; font-size: 120px; text-shadow: 0 0 50px #FF0055; font-weight: bold; }
-        
         .btn { 
             background: transparent; border: 4px solid #00f3ff; color: #00f3ff; 
             padding: 20px 80px; font-size: 32px; cursor: pointer; transition: 0.3s;
@@ -74,7 +68,6 @@
     let particles = [];
     let bgmStarted = false;
 
-    // --- BGM & 音響 ---
     const bgm = new Audio('assets/sounds/in-your-world.mp3');
     bgm.loop = true;
     let audioCtx = null;
@@ -138,7 +131,6 @@
         }
     }
 
-    // --- パーティクル ---
     function createExplosion(x, y, color, size = 1) {
         for (let i = 0; i < 40 * size; i++) {
             particles.push({
@@ -148,7 +140,6 @@
         }
     }
 
-    // --- キャラ設定 ---
     const player = { width: 80, height: 45, x: 700 - 40, y: 1000, color: '#00f3ff', alive: true };
     let bullets = [], enemyBullets = [], ufo = { x: -150, y: 70, w: 90, h: 40, active: false, speed: 6, color: '#FF1493' };
     let aliens = [], alienDir = 1, alienSpeed = 0.5, stars = [];
@@ -157,11 +148,17 @@
         aliens = [];
         for (let r = 0; r < 4; r++) {
             for (let c = 0; c < 8; c++) {
-                let color, pts, type;
-                if (r === 0) { color = '#FF3333'; pts = 30; type = 'special'; }
-                else if (r === 1) { color = '#33FF33'; pts = 20; type = 'mid'; }
-                else { color = (r === 2) ? '#3333FF' : '#FFFF33'; pts = 10; type = 'small'; }
-                aliens.push({ x: 420 + c * 80, y: 180 + r * 60, w: 50, h: 35, color, points: pts, type, alive: true });
+                let color, pts, type, w, h;
+                if (r === 0) { 
+                    color = '#FF3333'; pts = 30; type = 'tiny'; w = 40; h = 30; // 最上段：さらに小さい新タイプ
+                } else if (r === 1) { 
+                    color = '#33FF33'; pts = 20; type = 'mid'; w = 50; h = 35; // 2段目：変更なし
+                } else { 
+                    color = (r === 2) ? '#3333FF' : '#FFFF33'; pts = 10; type = 'special'; w = 50; h = 35; // 3・4段目：以前の最上段の形
+                }
+                // 中央寄せのためのオフセット計算（最大幅50を基準）
+                const xOffset = (50 - w) / 2;
+                aliens.push({ x: 420 + c * 80 + xOffset, y: 180 + r * 60, w: w, h: h, color, points: pts, type, alive: true });
             }
         }
         alienSpeed = 0.5;
@@ -171,16 +168,26 @@
         ctx.fillStyle = a.color;
         ctx.shadowBlur = 15; ctx.shadowColor = a.color;
         const x = a.x, y = a.y, w = a.w, h = a.h;
-        if (a.type === 'special') {
-            ctx.fillRect(x + w*0.3, y, w*0.4, h*0.2); ctx.fillRect(x, y + h*0.2, w, h*0.5);                  
-            ctx.fillRect(x + w*0.2, y + h*0.7, w*0.1, h*0.3); ctx.fillRect(x + w*0.7, y + h*0.7, w*0.1, h*0.3);
-        } else if (a.type === 'mid') {
-            ctx.fillRect(x, y, w*0.2, h*0.3); ctx.fillRect(x + w*0.8, y, w*0.2, h*0.3);  
-            ctx.fillRect(x + w*0.1, y + h*0.2, w*0.8, h*0.6); ctx.fillRect(x + w*0.2, y + h*0.8, w*0.2, h*0.2); ctx.fillRect(x + w*0.6, y + h*0.8, w*0.2, h*0.2);
+
+        if (a.type === 'tiny') {
+            // 最上段：もっと小さい新しい形
+            ctx.fillRect(x + w*0.2, y, w*0.6, h*0.3); 
+            ctx.fillRect(x, y + h*0.3, w, h*0.4);     
+            ctx.fillRect(x + w*0.1, y + h*0.7, w*0.2, h*0.3); 
+            ctx.fillRect(x + w*0.7, y + h*0.7, w*0.2, h*0.3);
+        } else if (a.type === 'special') {
+            // 3・4段目：以前の最上段の形
+            ctx.fillRect(x + w*0.3, y, w*0.4, h*0.2); 
+            ctx.fillRect(x, y + h*0.2, w, h*0.5);                  
+            ctx.fillRect(x + w*0.2, y + h*0.7, w*0.1, h*0.3); 
+            ctx.fillRect(x + w*0.7, y + h*0.7, w*0.1, h*0.3);
         } else {
-            ctx.fillRect(x + w*0.3, y, w*0.4, h*0.2); ctx.fillRect(x, y + h*0.2, w, h*0.5);      
-            ctx.fillRect(x + w*0.2, y + h*0.7, w*0.1, h*0.3); ctx.fillRect(x + w*0.7, y + h*0.7, w*0.1, h*0.3);
+            // 2段目：変更なし (Mid)
+            ctx.fillRect(x, y, w*0.2, h*0.3); ctx.fillRect(x + w*0.8, y, w*0.2, h*0.3);  
+            ctx.fillRect(x + w*0.1, y + h*0.2, w*0.8, h*0.6); 
+            ctx.fillRect(x + w*0.2, y + h*0.8, w*0.2, h*0.2); ctx.fillRect(x + w*0.6, y + h*0.8, w*0.2, h*0.2);
         }
+        
         ctx.shadowBlur = 0; ctx.fillStyle = '#000';
         ctx.fillRect(x + w*0.25, y + h*0.3, w*0.12, h*0.12); ctx.fillRect(x + w*0.63, y + h*0.3, w*0.12, h*0.12);
     }
@@ -247,7 +254,6 @@
         });
         if (edge) { alienDir *= -1; aliens.forEach(a => a.y += 30); }
 
-        // --- COMPLETE判定 ---
         if (activeAliens === 0) winGame();
 
         if (Math.random() < 0.02) {
